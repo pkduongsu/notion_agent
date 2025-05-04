@@ -1,0 +1,6 @@
+google-adk
+langchain
+langgraph
+load_dotenv
+langchain-tavily
+langchain-community
