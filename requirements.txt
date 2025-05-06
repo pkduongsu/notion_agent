@@ -1,6 +1,13 @@
+google-api-python-client
+google-auth-httplib2
+google-auth-oauthlib
 google-adk
 langchain
-langgraph
-load_dotenv
-langchain-tavily
 langchain-community
+langchain-google-genai
+langchain-tavily
+langgraph
+notion-client
+python-dotenv
+Flask
+apscheduler
