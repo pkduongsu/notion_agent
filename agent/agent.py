@@ -1,67 +1,32 @@
-import datetime
-from zoneinfo import ZoneInfo
-from google.adk.agents import Agent
-
-def get_weather(city: str) -> dict:
-    """Retrieves the current weather report for a specified city.
-
-    Args:
-        city (str): The name of the city for which to retrieve the weather report.
-
-    Returns:
-        dict: status and result or error msg.
-    """
-    if city.lower() == "new york":
-        return {
-            "status": "success",
-            "report": (
-                "The weather in New York is sunny with a temperature of 25 degrees"
-                " Celsius (77 degrees Fahrenheit)."
-            ),
-        }
-    else:
-        return {
-            "status": "error",
-            "error_message": f"Weather information for '{city}' is not available.",
-        }
+from google.adk.agents import LlmAgent
+import asyncio
+from dotenv import load_dotenv
+from .tools import get_notion_tools, init_notion_tools
 
 
-def get_current_time(city: str) -> dict:
-    """Returns the current time in a specified city.
-
-    Args:
-        city (str): The name of the city for which to retrieve the current time.
-
-    Returns:
-        dict: status and result or error msg.
-    """
-
-    if city.lower() == "new york":
-        tz_identifier = "America/New_York"
-    else:
-        return {
-            "status": "error",
-            "error_message": (
-                f"Sorry, I don't have timezone information for {city}."
-            ),
-        }
-
-    tz = ZoneInfo(tz_identifier)
-    now = datetime.datetime.now(tz)
-    report = (
-        f'The current time in {city} is {now.strftime("%Y-%m-%d %H:%M:%S %Z%z")}'
-    )
-    return {"status": "success", "report": report}
+load_dotenv()
 
 
-root_agent = Agent(
-    name="weather_time_agent",
-    model="gemini-2.0-flash",
-    description=(
-        "Agent to answer questions about the time and weather in a city."
-    ),
-    instruction=(
-        "You are a helpful agent who can answer user questions about the time and weather in a city."
-    ),
-    tools=[get_weather, get_current_time],
+root_agent = LlmAgent(
+    model="gemini-2.0-flash-001", 
+    name="notion_assistant",
+    description="Assistant that helps manage Notion workspaces",
+    instruction="You are an assistant that helps users manage their Notion workspace. Use the tools available to you to interact with Notion databases and pages.",
+    tools=get_notion_tools()
 )
+
+async def initialize_agent(callback_context=None, **kwargs):
+    await init_notion_tools()
+    root_agent.tools = get_notion_tools()
+    print("Agent tools updated with Notion tools")
+
+# Create a wrapper function that can be called synchronously
+def initialize_agent_wrapper(callback_context=None, **kwargs):
+    try:
+        loop = asyncio.get_event_loop()
+        asyncio.create_task(initialize_agent(callback_context, **kwargs))
+    except RuntimeError:
+        asyncio.run(initialize_agent(callback_context, **kwargs))
+
+# Register the wrapper function as the callback
+root_agent.before_agent_callback = initialize_agent_wrapper
